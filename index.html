@@ -22,13 +22,16 @@
   <style>body { box-sizing: border-box; }</style>
  </head>
  <body class="h-full">
-  <div id="app" class="h-full w-full overflow-auto" style="background-color: #0f172a;"><!-- Tabs -->
-   <div class="flex border-b" style="border-color: #1e293b;"><button id="tab-student" onclick="switchTab('student')" class="flex-1 py-3 text-sm font-600 text-center tab-active" style="color: #a78bfa; border-color: #a78bfa;"> <i data-lucide="user" style="width:16px;height:16px;display:inline;vertical-align:-3px;"></i> Student </button> <button id="tab-teacher" onclick="switchTab('teacher')" class="flex-1 py-3 text-sm font-600 text-center" style="color: #64748b;"> <i data-lucide="bar-chart-3" style="width:16px;height:16px;display:inline;vertical-align:-3px;"></i> Teacher </button>
+  <div id="app" class="h-full w-full overflow-auto" style="background-color: #0f172a;">
+   <!-- Tabs -->
+   <div class="flex border-b" style="border-color: #1e293b;">
+    <button id="tab-student" onclick="switchTab('student')" class="flex-1 py-3 text-sm font-600 text-center tab-active" style="color: #a78bfa; border-color: #a78bfa;"> <i data-lucide="user" style="width:16px;height:16px;display:inline;vertical-align:-3px;"></i> Student </button> <button id="tab-teacher" onclick="switchTab('teacher')" class="flex-1 py-3 text-sm font-600 text-center" style="color: #64748b;"> <i data-lucide="bar-chart-3" style="width:16px;height:16px;display:inline;vertical-align:-3px;"></i> Teacher </button>
    </div><!-- Student View -->
    <div id="view-student" class="p-5 max-w-lg mx-auto fade-in">
     <h1 id="main-title" class="text-2xl font-bold text-center mb-1" style="color: #f1f5f9;">Real or AI?</h1>
     <p id="subtitle-text" class="text-center text-sm mb-5" style="color: #94a3b8;">Watch each video and cast your vote</p><!-- Name input -->
-    <div class="mb-5"><label for="student-name" class="block text-xs font-500 mb-1" style="color: #94a3b8;">Your Name</label> <input id="student-name" type="text" placeholder="Enter your name" class="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2" style="background:#1e293b;color:#f1f5f9;border:1px solid #334155;--tw-ring-color:#a78bfa;">
+    <div class="mb-5">
+     <label for="student-name" class="block text-xs font-500 mb-1" style="color: #94a3b8;">Your Name</label> <input id="student-name" type="text" placeholder="Enter your name" class="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2" style="background:#1e293b;color:#f1f5f9;border:1px solid #334155;--tw-ring-color:#a78bfa;">
     </div><!-- Video Cards -->
     <div id="video-cards" class="space-y-3"></div><!-- Submit --> <button id="submit-btn" onclick="submitVotes()" class="w-full mt-5 py-3 rounded-xl font-600 text-sm vote-btn" style="background:#7c3aed;color:#fff;"> Submit Votes </button>
     <div id="submit-msg" class="text-center text-sm mt-3 hidden" style="color:#34d399;"></div>
@@ -53,6 +56,7 @@
 
   let allVotes = [];
   let studentSelections = { video_1: null, video_2: null, video_3: null, video_4: null };
+  let config = { ...defaultConfig };
 
   // Build video cards
   function buildVideoCards() {
@@ -62,10 +66,10 @@
       const key = `video_${i}`;
       const card = document.createElement('div');
       card.className = 'rounded-xl p-4';
-      card.style.background = defaultConfig.surface_color;
+      card.style.background = config.surface_color;
       card.innerHTML = `
-        <p class="font-600 text-sm mb-3" style="color:${defaultConfig.text_color}">
-          <i data-lucide="play-circle" style="width:18px;height:18px;display:inline;vertical-align:-4px;margin-right:4px;color:${defaultConfig.primary_action}"></i>
+        <p class="font-600 text-sm mb-3" style="color:${config.text_color}">
+          <i data-lucide="play-circle" style="width:18px;height:18px;display:inline;vertical-align:-4px;margin-right:4px;color:${config.primary_action}"></i>
           Video ${i}
         </p>
         <div class="flex gap-2">
@@ -132,7 +136,6 @@
       msgEl.classList.remove('hidden');
       document.getElementById('student-name').value = '';
       studentSelections = { video_1: null, video_2: null, video_3: null, video_4: null };
-      // Reset buttons
       document.querySelectorAll('#video-cards .vote-btn').forEach(b => { b.classList.remove('selected'); b.style.opacity = '1'; });
     } else {
       errEl.textContent = 'Something went wrong. Please try again.';
@@ -140,7 +143,6 @@
     }
   }
 
-  // Teacher charts
   function renderCharts(data) {
     document.getElementById('total-responses').textContent = data.length + ' response' + (data.length !== 1 ? 's' : '');
     const container = document.getElementById('charts');
@@ -159,16 +161,16 @@
         chartEl = document.createElement('div');
         chartEl.id = 'chart-' + i;
         chartEl.className = 'rounded-xl p-4';
-        chartEl.style.background = defaultConfig.surface_color;
+        chartEl.style.background = config.surface_color;
         container.appendChild(chartEl);
       }
       chartEl.innerHTML = `
-        <p class="font-600 text-sm mb-3" style="color:${defaultConfig.text_color}">Video ${i}</p>
+        <p class="font-600 text-sm mb-3" style="color:${config.text_color}">Video ${i}</p>
         <div class="space-y-2">
           <div>
             <div class="flex justify-between text-xs mb-1">
               <span style="color:${colors.real}">✅ Real</span>
-              <span style="color:${defaultConfig.text_color}">${realCount} (${realPct}%)</span>
+              <span style="color:${config.text_color}">${realCount} (${realPct}%)</span>
             </div>
             <div class="w-full h-6 rounded-full overflow-hidden" style="background:#0f172a;">
               <div class="h-full rounded-full bar-animate" style="width:${realPct}%;background:${colors.real};"></div>
@@ -177,7 +179,7 @@
           <div>
             <div class="flex justify-between text-xs mb-1">
               <span style="color:${colors.fake}">🤖 Fake / AI</span>
-              <span style="color:${defaultConfig.text_color}">${fakeCount} (${fakePct}%)</span>
+              <span style="color:${config.text_color}">${fakeCount} (${fakePct}%)</span>
             </div>
             <div class="w-full h-6 rounded-full overflow-hidden" style="background:#0f172a;">
               <div class="h-full rounded-full bar-animate" style="width:${fakePct}%;background:${colors.fake};"></div>
@@ -205,7 +207,6 @@
     }
   }
 
-  // Data SDK
   const dataHandler = {
     onDataChanged(data) {
       allVotes = data;
@@ -215,45 +216,46 @@
     }
   };
 
-  // Element SDK
   window.elementSdk.init({
     defaultConfig,
-    onConfigChange: async (config) => {
-      document.getElementById('app').style.backgroundColor = config.background_color || defaultConfig.background_color;
-      document.getElementById('main-title').textContent = config.main_title || defaultConfig.main_title;
-      document.getElementById('subtitle-text').textContent = config.subtitle_text || defaultConfig.subtitle_text;
-      document.getElementById('submit-btn').style.backgroundColor = config.primary_action || defaultConfig.primary_action;
+    onConfigChange: async (cfg) => {
+      config = cfg;
+      document.getElementById('app').style.backgroundColor = cfg.background_color || defaultConfig.background_color;
+      document.getElementById('main-title').textContent = cfg.main_title || defaultConfig.main_title;
+      document.getElementById('subtitle-text').textContent = cfg.subtitle_text || defaultConfig.subtitle_text;
+      document.getElementById('submit-btn').style.backgroundColor = cfg.primary_action || defaultConfig.primary_action;
 
-      const font = config.font_family || 'DM Sans';
+      const font = cfg.font_family || 'DM Sans';
       document.getElementById('app').style.fontFamily = `${font}, sans-serif`;
-      if (config.font_size) {
-        const b = config.font_size;
-        document.getElementById('main-title').style.fontSize = b * 1.8 + 'px';
-        document.getElementById('subtitle-text').style.fontSize = b * 0.85 + 'px';
+      if (cfg.font_size) {
+        const b = cfg.font_size;
+        document.getElementById('main-title').style.fontSize = (b * 1.8) + 'px';
+        document.getElementById('subtitle-text').style.fontSize = (b * 0.85) + 'px';
       }
+
+      buildVideoCards();
+      renderCharts(allVotes);
     },
-    mapToCapabilities: (config) => ({
+    mapToCapabilities: (cfg) => ({
       recolorables: [
-        { get: () => config.background_color || defaultConfig.background_color, set: v => { config.background_color = v; window.elementSdk.setConfig({ background_color: v }); } },
-        { get: () => config.surface_color || defaultConfig.surface_color, set: v => { config.surface_color = v; window.elementSdk.setConfig({ surface_color: v }); } },
-        { get: () => config.text_color || defaultConfig.text_color, set: v => { config.text_color = v; window.elementSdk.setConfig({ text_color: v }); } },
-        { get: () => config.primary_action || defaultConfig.primary_action, set: v => { config.primary_action = v; window.elementSdk.setConfig({ primary_action: v }); } },
-        { get: () => config.secondary_action || defaultConfig.secondary_action, set: v => { config.secondary_action = v; window.elementSdk.setConfig({ secondary_action: v }); } }
+        { get: () => cfg.background_color || defaultConfig.background_color, set: v => { config.background_color = v; window.elementSdk.setConfig({ background_color: v }); } },
+        { get: () => cfg.surface_color || defaultConfig.surface_color, set: v => { config.surface_color = v; window.elementSdk.setConfig({ surface_color: v }); } },
+        { get: () => cfg.text_color || defaultConfig.text_color, set: v => { config.text_color = v; window.elementSdk.setConfig({ text_color: v }); } },
+        { get: () => cfg.primary_action || defaultConfig.primary_action, set: v => { config.primary_action = v; window.elementSdk.setConfig({ primary_action: v }); } },
+        { get: () => cfg.secondary_action || defaultConfig.secondary_action, set: v => { config.secondary_action = v; window.elementSdk.setConfig({ secondary_action: v }); } }
       ],
       borderables: [],
-      fontEditable: { get: () => config.font_family || 'DM Sans', set: v => { config.font_family = v; window.elementSdk.setConfig({ font_family: v }); } },
-      fontSizeable: { get: () => config.font_size || 16, set: v => { config.font_size = v; window.elementSdk.setConfig({ font_size: v }); } }
+      fontEditable: { get: () => cfg.font_family || 'DM Sans', set: v => { config.font_family = v; window.elementSdk.setConfig({ font_family: v }); } },
+      fontSizeable: { get: () => cfg.font_size || 16, set: v => { config.font_size = v; window.elementSdk.setConfig({ font_size: v }); } }
     }),
-    mapToEditPanelValues: (config) => new Map([
-      ['main_title', config.main_title || defaultConfig.main_title],
-      ['subtitle_text', config.subtitle_text || defaultConfig.subtitle_text]
+    mapToEditPanelValues: (cfg) => new Map([
+      ['main_title', cfg.main_title || defaultConfig.main_title],
+      ['subtitle_text', cfg.subtitle_text || defaultConfig.subtitle_text]
     ])
   });
 
-  // Initialize in correct order
   buildVideoCards();
-  lucide.createIcons();
   window.dataSdk.init(dataHandler);
 </script>
- <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9e1e7e80825e8fec',t:'MTc3NDQ0Nzc3NC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9e1e8657a0478fec',t:'MTc3NDQ0ODA5Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
