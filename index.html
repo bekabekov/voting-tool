@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Vote</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="/_sdk/data_sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'DM Sans', sans-serif; }
+    .vote-btn { transition: all 0.2s ease; }
+    .vote-btn:hover { transform: translateY(-2px); }
+    .vote-btn.selected { transform: scale(1.05); box-shadow: 0 0 0 3px rgba(255,255,255,0.3); }
+    .bar-animate { transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+    .fade-in { animation: fadeIn 0.4s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .tab-active { border-bottom: 3px solid; }
+  </style>
+  <style>body { box-sizing: border-box; }</style>
+ </head>
+ <body class="h-full">
+  <div id="app" class="h-full w-full overflow-auto" style="background-color: #0f172a;"><!-- Tabs -->
+   <div class="flex border-b" style="border-color: #1e293b;"><button id="tab-student" onclick="switchTab('student')" class="flex-1 py-3 text-sm font-600 text-center tab-active" style="color: #a78bfa; border-color: #a78bfa;"> <i data-lucide="user" style="width:16px;height:16px;display:inline;vertical-align:-3px;"></i> Student </button> <button id="tab-teacher" onclick="switchTab('teacher')" class="flex-1 py-3 text-sm font-600 text-center" style="color: #64748b;"> <i data-lucide="bar-chart-3" style="width:16px;height:16px;display:inline;vertical-align:-3px;"></i> Teacher </button>
+   </div><!-- Student View -->
+   <div id="view-student" class="p-5 max-w-lg mx-auto fade-in">
+    <h1 id="main-title" class="text-2xl font-bold text-center mb-1" style="color: #f1f5f9;">Real or AI?</h1>
+    <p id="subtitle-text" class="text-center text-sm mb-5" style="color: #94a3b8;">Watch each video and cast your vote</p><!-- Name input -->
+    <div class="mb-5"><label for="student-name" class="block text-xs font-500 mb-1" style="color: #94a3b8;">Your Name</label> <input id="student-name" type="text" placeholder="Enter your name" class="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2" style="background:#1e293b;color:#f1f5f9;border:1px solid #334155;--tw-ring-color:#a78bfa;">
+    </div><!-- Video Cards -->
+    <div id="video-cards" class="space-y-3"></div><!-- Submit --> <button id="submit-btn" onclick="submitVotes()" class="w-full mt-5 py-3 rounded-xl font-600 text-sm vote-btn" style="background:#7c3aed;color:#fff;"> Submit Votes </button>
+    <div id="submit-msg" class="text-center text-sm mt-3 hidden" style="color:#34d399;"></div>
+    <div id="error-msg" class="text-center text-sm mt-3 hidden" style="color:#f87171;"></div>
+   </div><!-- Teacher View -->
+   <div id="view-teacher" class="p-5 max-w-2xl mx-auto hidden fade-in">
+    <h2 class="text-xl font-bold mb-1" style="color:#f1f5f9;">Results Dashboard</h2>
+    <p id="total-responses" class="text-sm mb-5" style="color:#94a3b8;">0 responses</p>
+    <div id="charts" class="space-y-5"></div>
+   </div>
+  </div>
+  <script>
+  const defaultConfig = {
+    main_title: 'Real or AI?',
+    subtitle_text: 'Watch each video and cast your vote',
+    background_color: '#0f172a',
+    surface_color: '#1e293b',
+    text_color: '#f1f5f9',
+    primary_action: '#7c3aed',
+    secondary_action: '#64748b'
+  };
+
+  let allVotes = [];
+  let studentSelections = { video_1: null, video_2: null, video_3: null, video_4: null };
+
+  // Build video cards
+  function buildVideoCards() {
+    const container = document.getElementById('video-cards');
+    container.innerHTML = '';
+    for (let i = 1; i <= 4; i++) {
+      const key = `video_${i}`;
+      const card = document.createElement('div');
+      card.className = 'rounded-xl p-4';
+      card.style.background = defaultConfig.surface_color;
+      card.innerHTML = `
+        <p class="font-600 text-sm mb-3" style="color:${defaultConfig.text_color}">
+          <i data-lucide="play-circle" style="width:18px;height:18px;display:inline;vertical-align:-4px;margin-right:4px;color:${defaultConfig.primary_action}"></i>
+          Video ${i}
+        </p>
+        <div class="flex gap-2">
+          <button onclick="selectVote('${key}','real',this)" class="vote-btn flex-1 py-2 rounded-lg text-sm font-500" style="background:#064e3b;color:#34d399;border:2px solid #065f46;" data-key="${key}" data-val="real">
+            ✅ Real
+          </button>
+          <button onclick="selectVote('${key}','fake',this)" class="vote-btn flex-1 py-2 rounded-lg text-sm font-500" style="background:#4c1d2e;color:#fb7185;border:2px solid #6b1d38;" data-key="${key}" data-val="fake">
+            🤖 Fake / AI
+          </button>
+        </div>`;
+      container.appendChild(card);
+    }
+    lucide.createIcons();
+  }
+
+  function selectVote(key, value, btn) {
+    studentSelections[key] = value;
+    const siblings = btn.parentElement.children;
+    for (const s of siblings) {
+      s.classList.remove('selected');
+      s.style.opacity = '0.5';
+    }
+    btn.classList.add('selected');
+    btn.style.opacity = '1';
+  }
+
+  async function submitVotes() {
+    const name = document.getElementById('student-name').value.trim();
+    const errEl = document.getElementById('error-msg');
+    const msgEl = document.getElementById('submit-msg');
+    errEl.classList.add('hidden');
+    msgEl.classList.add('hidden');
+
+    if (!name) { errEl.textContent = 'Please enter your name.'; errEl.classList.remove('hidden'); return; }
+    for (let i = 1; i <= 4; i++) {
+      if (!studentSelections[`video_${i}`]) {
+        errEl.textContent = `Please vote on Video ${i}.`;
+        errEl.classList.remove('hidden');
+        return;
+      }
+    }
+
+    if (allVotes.length >= 999) {
+      errEl.textContent = 'Maximum responses reached (999). Please ask your teacher to clear some data.';
+      errEl.classList.remove('hidden');
+      return;
+    }
+
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true; btn.textContent = 'Submitting...'; btn.style.opacity = '0.6';
+
+    const result = await window.dataSdk.create({
+      student_name: name,
+      video_1: studentSelections.video_1,
+      video_2: studentSelections.video_2,
+      video_3: studentSelections.video_3,
+      video_4: studentSelections.video_4
+    });
+
+    btn.disabled = false; btn.textContent = 'Submit Votes'; btn.style.opacity = '1';
+
+    if (result.isOk) {
+      msgEl.textContent = '🎉 Vote submitted! Thank you, ' + name + '.';
+      msgEl.classList.remove('hidden');
+      document.getElementById('student-name').value = '';
+      studentSelections = { video_1: null, video_2: null, video_3: null, video_4: null };
+      // Reset buttons
+      document.querySelectorAll('#video-cards .vote-btn').forEach(b => { b.classList.remove('selected'); b.style.opacity = '1'; });
+    } else {
+      errEl.textContent = 'Something went wrong. Please try again.';
+      errEl.classList.remove('hidden');
+    }
+  }
+
+  // Teacher charts
+  function renderCharts(data) {
+    document.getElementById('total-responses').textContent = data.length + ' response' + (data.length !== 1 ? 's' : '');
+    const container = document.getElementById('charts');
+    const colors = { real: '#34d399', fake: '#fb7185' };
+
+    for (let i = 1; i <= 4; i++) {
+      const key = `video_${i}`;
+      const realCount = data.filter(d => d[key] === 'real').length;
+      const fakeCount = data.filter(d => d[key] === 'fake').length;
+      const total = realCount + fakeCount || 1;
+      const realPct = Math.round((realCount / total) * 100);
+      const fakePct = Math.round((fakeCount / total) * 100);
+
+      let chartEl = document.getElementById('chart-' + i);
+      if (!chartEl) {
+        chartEl = document.createElement('div');
+        chartEl.id = 'chart-' + i;
+        chartEl.className = 'rounded-xl p-4';
+        chartEl.style.background = defaultConfig.surface_color;
+        container.appendChild(chartEl);
+      }
+      chartEl.innerHTML = `
+        <p class="font-600 text-sm mb-3" style="color:${defaultConfig.text_color}">Video ${i}</p>
+        <div class="space-y-2">
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span style="color:${colors.real}">✅ Real</span>
+              <span style="color:${defaultConfig.text_color}">${realCount} (${realPct}%)</span>
+            </div>
+            <div class="w-full h-6 rounded-full overflow-hidden" style="background:#0f172a;">
+              <div class="h-full rounded-full bar-animate" style="width:${realPct}%;background:${colors.real};"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span style="color:${colors.fake}">🤖 Fake / AI</span>
+              <span style="color:${defaultConfig.text_color}">${fakeCount} (${fakePct}%)</span>
+            </div>
+            <div class="w-full h-6 rounded-full overflow-hidden" style="background:#0f172a;">
+              <div class="h-full rounded-full bar-animate" style="width:${fakePct}%;background:${colors.fake};"></div>
+            </div>
+          </div>
+        </div>`;
+    }
+  }
+
+  function switchTab(tab) {
+    const sTab = document.getElementById('tab-student');
+    const tTab = document.getElementById('tab-teacher');
+    const sView = document.getElementById('view-student');
+    const tView = document.getElementById('view-teacher');
+
+    if (tab === 'student') {
+      sView.classList.remove('hidden'); tView.classList.add('hidden');
+      sTab.style.color = '#a78bfa'; sTab.classList.add('tab-active'); sTab.style.borderColor = '#a78bfa';
+      tTab.style.color = '#64748b'; tTab.classList.remove('tab-active');
+    } else {
+      tView.classList.remove('hidden'); sView.classList.add('hidden');
+      tTab.style.color = '#a78bfa'; tTab.classList.add('tab-active'); tTab.style.borderColor = '#a78bfa';
+      sTab.style.color = '#64748b'; sTab.classList.remove('tab-active');
+      renderCharts(allVotes);
+    }
+  }
+
+  // Data SDK
+  const dataHandler = {
+    onDataChanged(data) {
+      allVotes = data;
+      if (!document.getElementById('view-teacher').classList.contains('hidden')) {
+        renderCharts(data);
+      }
+    }
+  };
+
+  // Element SDK
+  window.elementSdk.init({
+    defaultConfig,
+    onConfigChange: async (config) => {
+      document.getElementById('app').style.backgroundColor = config.background_color || defaultConfig.background_color;
+      document.getElementById('main-title').textContent = config.main_title || defaultConfig.main_title;
+      document.getElementById('subtitle-text').textContent = config.subtitle_text || defaultConfig.subtitle_text;
+      document.getElementById('submit-btn').style.backgroundColor = config.primary_action || defaultConfig.primary_action;
+
+      const font = config.font_family || 'DM Sans';
+      document.getElementById('app').style.fontFamily = `${font}, sans-serif`;
+      if (config.font_size) {
+        const b = config.font_size;
+        document.getElementById('main-title').style.fontSize = b * 1.8 + 'px';
+        document.getElementById('subtitle-text').style.fontSize = b * 0.85 + 'px';
+      }
+    },
+    mapToCapabilities: (config) => ({
+      recolorables: [
+        { get: () => config.background_color || defaultConfig.background_color, set: v => { config.background_color = v; window.elementSdk.setConfig({ background_color: v }); } },
+        { get: () => config.surface_color || defaultConfig.surface_color, set: v => { config.surface_color = v; window.elementSdk.setConfig({ surface_color: v }); } },
+        { get: () => config.text_color || defaultConfig.text_color, set: v => { config.text_color = v; window.elementSdk.setConfig({ text_color: v }); } },
+        { get: () => config.primary_action || defaultConfig.primary_action, set: v => { config.primary_action = v; window.elementSdk.setConfig({ primary_action: v }); } },
+        { get: () => config.secondary_action || defaultConfig.secondary_action, set: v => { config.secondary_action = v; window.elementSdk.setConfig({ secondary_action: v }); } }
+      ],
+      borderables: [],
+      fontEditable: { get: () => config.font_family || 'DM Sans', set: v => { config.font_family = v; window.elementSdk.setConfig({ font_family: v }); } },
+      fontSizeable: { get: () => config.font_size || 16, set: v => { config.font_size = v; window.elementSdk.setConfig({ font_size: v }); } }
+    }),
+    mapToEditPanelValues: (config) => new Map([
+      ['main_title', config.main_title || defaultConfig.main_title],
+      ['subtitle_text', config.subtitle_text || defaultConfig.subtitle_text]
+    ])
+  });
+
+  window.dataSdk.init(dataHandler);
+
+  buildVideoCards();
+  lucide.createIcons();
+</script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9e1bb3cd33b7dbe7',t:'MTc3NDQxODUwMC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
